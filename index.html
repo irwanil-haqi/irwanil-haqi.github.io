@@ -1,183 +1,68 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>SharePoint File Existence Checker</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    body { font-family: Arial, sans-serif; margin: 18px; background:#f7f7f9; color:#222 }
-    .card { background:#fff; padding:14px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,.06); margin-bottom:12px }
-    label { display:block; margin-top:8px; font-size:13px }
-    input[type="text"], input[type="date"], input[type="number"] { width:100%; padding:8px; border:1px solid #ddd; border-radius:6px }
-    button { margin-top:10px; padding:10px 14px; border:0; background:#2563eb; color:white; border-radius:8px; cursor:pointer }
-    table { width:100%; border-collapse:collapse; margin-top:12px; font-size:13px }
-    th, td { padding:8px; border-bottom:1px solid #eee; text-align:left }
-    th { background:#fafafa; font-weight:600 }
-    .exists { color:green; font-weight:600 }
-    .notfound { color:#b91c1c; font-weight:600 }
-    .small { font-size:12px; color:#666 }
-    .note { font-size:13px; color:#444; margin-bottom:8px }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Portfolio</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h2>irwanil File Existence Checker (simple)</h2>
-
-  <div class="card">
-    <div class="note">
-      Make sure you're signed into SharePoint in this browser. If requests are blocked by CORS or redirected to a login page, you'll see errors.
+  <!-- Header / Hero -->
+  <header class="hero">
+    <div class="container">
+      <h1>Hi, I'm <span class="highlight">Your Name</span></h1>
+      <p class="subtitle">Data Architect • BI Strategist • Problem Solver</p>
+      <a href="#projects" class="btn">View My Work</a>
     </div>
+  </header>
 
-    <label>Base site URL (example: <span class="small">https://xapiens.sharepoint.com/sites/EnterpriseApplication/</span>)</label>
-    <input id="baseUrl" type="text" value="https://xapiens.sharepoint.com/sites/EnterpriseApplication/" />
+  <!-- About -->
+  <section id="about" class="section">
+    <div class="container">
+      <h2>About Me</h2>
+      <p>
+        I’m a passionate data architect and BI strategist with experience in SQL, data warehousing, and analytics.
+        I love designing scalable architectures and delivering insights that drive decisions.
+      </p>
+    </div>
+  </section>
 
-    <label>Folder path (URL-encoded spaces as %20), ending with slash</label>
-    <input id="folder" type="text" value="Shared%20Documents/DIGITAL%20INFRASTRUCTURE%20&%20OPERATIONS/DIGITAL%20SERVICES%20&%20OPERATION/DIGITAL%20SERVICES%20&%20OPERATION/TICKET%20EXPORT%20DATA/xbase/" />
+  <!-- Projects -->
+  <section id="projects" class="section bg-light">
+    <div class="container">
+      <h2>My Projects</h2>
+      <div class="grid">
+        <div class="card">
+          <img src="https://via.placeholder.com/400x250" alt="Project 1">
+          <h3>Project One</h3>
+          <p>Description of the project, tools used, and outcomes.</p>
+        </div>
+        <div class="card">
+          <img src="https://via.placeholder.com/400x250" alt="Project 2">
+          <h3>Project Two</h3>
+          <p>Description of the project, tools used, and outcomes.</p>
+        </div>
+        <div class="card">
+          <img src="https://via.placeholder.com/400x250" alt="Project 3">
+          <h3>Project Three</h3>
+          <p>Description of the project, tools used, and outcomes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <label>Filename prefix (e.g. <span class="small">xbase_ticket_</span>)</label>
-    <input id="prefix" type="text" value="xbase_ticket_" />
+  <!-- Contact -->
+  <section id="contact" class="section">
+    <div class="container">
+      <h2>Contact Me</h2>
+      <p>Email: <a href="mailto:your.email@example.com">your.email@example.com</a></p>
+      <p>LinkedIn: <a href="https://linkedin.com/in/yourprofile" target="_blank">linkedin.com/in/yourprofile</a></p>
+    </div>
+  </section>
 
-    <label>Extension (e.g. <span class="small">.xlsx</span>)</label>
-    <input id="ext" type="text" value=".xlsx" />
-
-    <label>Start date</label>
-    <input id="startDate" type="date" />
-
-    <label>Days to look back (including start date)</label>
-    <input id="daysBack" type="number" value="10" min="0" />
-
-    <button id="runBtn">Generate & Check</button>
-  </div>
-
-  <div id="output" class="card">
-    <div id="status" class="small">Ready.</div>
-    <table id="results" aria-live="polite">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>URL</th>
-          <th>HTTP</th>
-          <th>Content-Type</th>
-          <th>Size</th>
-          <th>Last-Modified</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-<script>
-(function(){
-  const runBtn = document.getElementById('runBtn');
-  const resultsBody = document.querySelector('#results tbody');
-  const statusEl = document.getElementById('status');
-
-  // helper: format date as MMddyyyy
-  function fmtMMDDYYYY(d) {
-    const mm = String(d.getMonth() + 1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    const yyyy = d.getFullYear();
-    return mm + dd + yyyy;
-  }
-
-  // create list of dates: startDate, startDate-1, ..., startDate-(daysBack-1)
-  function buildDates(start, days) {
-    const arr = [];
-    for (let i=0; i<days; i++) {
-      const dt = new Date(start);
-      dt.setDate(start.getDate() - i);
-      arr.push(new Date(dt));
-    }
-    return arr;
-  }
-
-  async function checkUrl(url) {
-    try {
-      // use HEAD to get metadata only; include credentials to send cookies
-      const resp = await fetch(url, { method: 'HEAD', credentials: 'include' });
-
-      // Some servers (or auth redirects) may return 200 but HTML content (login page).
-      const ct = resp.headers.get('content-type') || '';
-      const cl = resp.headers.get('content-length') || '';
-      const lm = resp.headers.get('last-modified') || '';
-
-      return { status: resp.status, ok: resp.ok, contentType: ct, size: cl, lastModified: lm };
-    } catch (err) {
-      // network/CORS error or blocked by browser
-      return { status: null, ok: false, error: err.message };
-    }
-  }
-
-  runBtn.addEventListener('click', async () => {
-    resultsBody.innerHTML = '';
-    statusEl.textContent = 'Working...';
-    runBtn.disabled = true;
-
-    const baseUrl = document.getElementById('baseUrl').value.trim();
-    const folder = document.getElementById('folder').value.trim();
-    const prefix = document.getElementById('prefix').value || '';
-    const ext = document.getElementById('ext').value || '.xlsx';
-    const startInput = document.getElementById('startDate').value;
-    const daysBack = parseInt(document.getElementById('daysBack').value, 10) || 0;
-
-    if (!baseUrl || !folder || !startInput || daysBack <= 0) {
-      alert('Please fill base URL, folder, start date and days to look back (>=1).');
-      runBtn.disabled = false;
-      statusEl.textContent = 'Ready.';
-      return;
-    }
-
-    const startDate = new Date(startInput);
-    const dates = buildDates(startDate, daysBack);
-
-    for (let d of dates) {
-      const fname = prefix + fmtMMDDYYYY(d) + ext;
-      const url = baseUrl.replace(/\/?$/, '/') + folder + fname;
-
-      // create table row early
-      const tr = document.createElement('tr');
-      const tdDate = document.createElement('td'); tdDate.textContent = d.toISOString().slice(0,10);
-      const tdUrl = document.createElement('td'); tdUrl.textContent = url; tdUrl.style.wordBreak = 'break-all';
-      const tdHttp = document.createElement('td'); tdHttp.textContent = 'Checking...';
-      const tdCT = document.createElement('td'); tdCT.textContent = '';
-      const tdSize = document.createElement('td'); tdSize.textContent = '';
-      const tdLM = document.createElement('td'); tdLM.textContent = '';
-
-      tr.appendChild(tdDate); tr.appendChild(tdUrl); tr.appendChild(tdHttp); tr.appendChild(tdCT); tr.appendChild(tdSize); tr.appendChild(tdLM);
-      resultsBody.appendChild(tr);
-
-      // perform check
-      const res = await checkUrl(url);
-
-      if (res.status === 200 && res.contentType && !res.contentType.toLowerCase().includes('text/html')) {
-        tdHttp.textContent = '200 (Exists)'; tdHttp.className = 'exists';
-      } else if (res.status === 200 && res.contentType && res.contentType.toLowerCase().includes('text/html')) {
-        // likely redirected to login page or HTML page
-        tdHttp.textContent = '200 (HTML - maybe login)'; tdHttp.className = 'notfound';
-      } else if (res.status === 404) {
-        tdHttp.textContent = '404 (Not Found)'; tdHttp.className = 'notfound';
-      } else if (res.status === null) {
-        tdHttp.textContent = 'Network/CORS/Error: ' + (res.error || 'blocked'); tdHttp.className = 'notfound';
-      } else {
-        tdHttp.textContent = (res.status ? res.status : 'Unknown') + ' (no/unknown)'; tdHttp.className = 'notfound';
-      }
-
-      tdCT.textContent = res.contentType || '';
-      tdSize.textContent = res.size || '';
-      tdLM.textContent = res.lastModified || '';
-    }
-
-    statusEl.textContent = 'Done.';
-    runBtn.disabled = false;
-  });
-
-  // fill start date default to 7 days ago
-  (function setDefault() {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    document.getElementById('startDate').value = d.toISOString().slice(0,10);
-  })();
-
-})();
-</script>
+  <!-- Footer -->
+  <footer class="footer">
+    <p>© 2025 Your Name. All rights reserved.</p>
+  </footer>
 </body>
 </html>
